@@ -96,9 +96,21 @@ export function DiscussionThread({
   threadQuery.data.posts.forEach((post) => {
     posts[post.id] = post as DiscussionPost;
   });
-  const rootPosts = rootPost === null
-    ? threadQuery.data.threadDetails.root_posts
-    : [rootPost];
+  // The API contract carries root post ids in threadDetails, but some
+  // backends only return the flat post list — derive the roots then.
+  const threadDetails = threadQuery.data.threadDetails as
+    | { root_posts?: number[] } | undefined;
+  let rootIds = threadDetails?.root_posts;
+  if (!rootIds) {
+    const childIds = new Set<number>();
+    threadQuery.data.posts.forEach((post) => {
+      (post.reaction ?? []).forEach((id: number) => childIds.add(id));
+    });
+    rootIds = threadQuery.data.posts
+      .map((post) => post.id)
+      .filter((id) => !childIds.has(id));
+  }
+  const rootPosts = rootPost === null ? rootIds : [rootPost];
 
   return (
     <div className="discussion-thread">
