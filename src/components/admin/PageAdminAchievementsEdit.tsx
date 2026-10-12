@@ -14,6 +14,8 @@ import type { components } from '../../api/schema';
 import { ROUTES } from '../../routes';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './shared/Modal';
+import { RichTextEditor } from '../shared/RichTextEditor';
+import { isRichTextEmpty } from '../../utils/richtext';
 import './PageAdminAchievementsEdit.scss';
 
 type S = components['schemas'];
@@ -122,7 +124,7 @@ export function PageAdminAchievementsEdit(): React.ReactElement {
     // admin.achievements.title.required / description.required are missing
     // from the i18n bundle, so plain Czech fallbacks are used here.
     title: form.title.trim() === '' ? 'Název je povinný.' : null,
-    description: form.description.trim() === '' ? 'Popis je povinný.' : null
+    description: isRichTextEmpty(form.description) ? 'Popis je povinný.' : null
   };
   const isValid = Object.values(errors).every((e) => e === null);
 
@@ -183,13 +185,11 @@ export function PageAdminAchievementsEdit(): React.ReactElement {
 
           <div className="form-group">
             <label htmlFor="description">{t('admin.achievements.description')}*</label>
-            <textarea
-              id="description"
-              className="form-control reply-editor"
-              rows={8}
+            <RichTextEditor
+              className="reply-editor"
               value={form.description}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, description: e.target.value }));
+              onChange={(html) => {
+                setForm((f) => ({ ...f, description: html }));
                 markTouched('description');
               }}
             />

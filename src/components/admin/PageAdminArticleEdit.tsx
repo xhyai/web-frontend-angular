@@ -15,6 +15,8 @@ import { ROUTES } from '../../routes';
 import { useTranslation } from 'react-i18next';
 import { useSelectedYear } from '../../hooks/useSelectedYear';
 import { Modal } from './shared/Modal';
+import { RichTextEditor } from '../shared/RichTextEditor';
+import { isRichTextEmpty } from '../../utils/richtext';
 import { isoToDatetimeLocal } from './dateInput';
 
 type S = components['schemas'];
@@ -129,7 +131,7 @@ export function PageAdminArticleEdit(): React.ReactElement {
     // admin.articles.title.required / body.required / picture.required are missing
     // from the i18n bundle, so plain Czech fallbacks are used here.
     title: form.title.trim() === '' ? 'Titulek je povinný.' : null,
-    body: form.body.trim() === '' ? 'Obsah je povinný.' : null,
+    body: isRichTextEmpty(form.body) ? 'Obsah je povinný.' : null,
     time_published: form.time_published === '' ? t('admin.articles.time_published.required') : null
   };
   const isValid = Object.values(errors).every((e) => e === null);
@@ -193,13 +195,11 @@ export function PageAdminArticleEdit(): React.ReactElement {
 
           <div className="form-group">
             <label htmlFor="body">{t('admin.articles.body')}*</label>
-            <textarea
-              id="body"
-              className="form-control reply-editor"
-              rows={12}
+            <RichTextEditor
+              className="reply-editor"
               value={form.body}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, body: e.target.value }));
+              onChange={(html) => {
+                setForm((f) => ({ ...f, body: html }));
                 markTouched('body');
               }}
             />

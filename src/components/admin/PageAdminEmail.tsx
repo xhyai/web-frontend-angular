@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { adminEmailSend, yearsGetAll } from '../../api/client';
 import type { components } from '../../api/schema';
 import { Modal } from './shared/Modal';
+import { RichTextEditor } from '../shared/RichTextEditor';
+import { isRichTextEmpty } from '../../utils/richtext';
 
 type S = components['schemas'];
 
@@ -17,9 +19,6 @@ interface EmailResult {
  * Admin page for sending e-mails to solvers of a year.
  * The form is validated first, then a confirmation modal shows a summary
  * before the e-mail is actually sent.
- *
- * Note: the Angular version used a Quill rich-text editor for the body;
- * here it is a plain textarea because no rich-text dependency is available.
  */
 export function PageAdminEmail(): React.ReactElement {
   const { t } = useTranslation();
@@ -85,7 +84,7 @@ export function PageAdminEmail(): React.ReactElement {
   const selectedYearName = years?.find((y) => y.id === effectiveTo)?.year;
 
   const valid =
-    effectiveTo !== null && subject.trim() !== '' && subject !== subjectInitial && emailType !== '' && body.trim() !== '';
+    effectiveTo !== null && subject.trim() !== '' && subject !== subjectInitial && emailType !== '' && !isRichTextEmpty(body);
 
   const summary = t('admin.email.summary', {
     successful: t(successful ? 'admin.email.successful.successful' : 'admin.email.successful.all'),
@@ -203,7 +202,11 @@ export function PageAdminEmail(): React.ReactElement {
             <label className="form-label" htmlFor="email-body">
               {t('admin.email.body')}
             </label>
-            <textarea className="form-control" id="email-body" rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
+            <RichTextEditor
+              className="body"
+              value={body}
+              onChange={setBody}
+            />
           </div>
         </div>
 
@@ -316,9 +319,7 @@ export function PageAdminEmail(): React.ReactElement {
           )}
 
           <span className="form-label">{t('admin.email.body')}</span>
-          <div>
-            <pre>{body}</pre>
-          </div>
+          <div dangerouslySetInnerHTML={{ __html: body }} />
         </div>
       </Modal>
     </div>

@@ -7,7 +7,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { formatKsiDate } from '../../utils/date';
 import { Modal } from './Modal';
+import { RichTextEditor } from './RichTextEditor';
 import { DiscussionPost, PostsMap } from './discussionTypes';
+import { isRichTextEmpty } from '../../utils/richtext';
 import './PostReplyModal.scss';
 
 export type PostReplyMode = 'reply' | 'edit' | 'new-thread';
@@ -34,8 +36,7 @@ interface PostReplyModalProps {
 
 /**
  * Port of the Angular ModalPostReplyComponent: creates new threads, replies
- * and edits posts. The rich-text Quill editor is replaced with a plain
- * textarea for now; bodies stay raw HTML like the backend stores them.
+ * and edits posts. Bodies stay raw HTML like the backend stores them.
  */
 export function PostReplyModal({
   show,
@@ -60,7 +61,9 @@ export function PostReplyModal({
     }
   }, [show, initialText]);
 
-  const contentValid = content.trim().length > 0 && content.length <= REPLY_MAX_LENGTH;
+  // Quill reports a pristine editor as `<p><br></p>`; only visible text counts.
+  // The length limit applies to the HTML string, like the original validators.
+  const contentValid = !isRichTextEmpty(content) && content.length <= REPLY_MAX_LENGTH;
   const nameValid = mode !== 'new-thread' ||
     (threadName.trim().length > 0 && threadName.length <= THREAD_NAME_MAX_LENGTH);
   const valid = contentValid && nameValid && !saving;
@@ -128,10 +131,10 @@ export function PostReplyModal({
             <div className="content" dangerouslySetInnerHTML={{ __html: post.body }} />
           </div>
         )}
-        <textarea
-          className="form-control reply-editor"
+        <RichTextEditor
+          className="reply-editor"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={setContent}
         />
         <div className={`post-size d-flex justify-content-end${content.length > REPLY_MAX_LENGTH ? ' text-danger' : ''}`}>
           <span>{t('modal.post-reply.total-size')}: {content.length} / {REPLY_MAX_LENGTH}</span>
