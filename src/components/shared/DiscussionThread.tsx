@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { threadDetailsGetSingle, threadsMarkVisited } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useLoginGate } from '../../auth/useLoginGate';
 import { useTranslation } from 'react-i18next';
 import { useSelectedYear } from '../../hooks/useSelectedYear';
 import { DiscussionPost, PostsMap } from './discussionTypes';
@@ -56,6 +57,7 @@ export function DiscussionThread({
   const maxDepth = useMaxPostsDepth();
   const { selectedYear } = useSelectedYear();
   const [newPostOpen, setNewPostOpen] = useState(false);
+  const { requireLogin, loginGate } = useLoginGate();
 
   const threadQuery = useQuery({
     queryKey: ['thread-details', threadId],
@@ -71,6 +73,16 @@ export function DiscussionThread({
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['thread-details', threadId] });
+  };
+
+  // Login-then-continue gate like the Angular version: the reply modal opens
+  // only after the user is authenticated instead of failing on save.
+  const openNewPost = () => {
+    void requireLogin().then((ok) => {
+      if (ok) {
+        setNewPostOpen(true);
+      }
+    });
   };
 
   if (threadQuery.isLoading) {
@@ -103,11 +115,12 @@ export function DiscussionThread({
       {rootPost === null && allowNewRootPosts && (
         <button
           className="btn btn-ksi w-100 new-post"
-          onClick={() => setNewPostOpen(true)}
+          onClick={openNewPost}
         >
           {t('discussion-thread.post.new')}
         </button>
       )}
+      {loginGate}
       <PostReplyModal
         show={newPostOpen}
         mode="reply"

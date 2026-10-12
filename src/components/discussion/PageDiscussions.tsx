@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { threadsGetAll, wavesGetAll } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useLoginGate } from '../../auth/useLoginGate';
 import { useSelectedYear } from '../../hooks/useSelectedYear';
 import { useTranslation } from 'react-i18next';
 import { ROUTES } from '../../routes';
@@ -23,6 +24,17 @@ export function PageDiscussions() {
   const { selectedYear } = useSelectedYear();
   const [waveId, setWaveId] = useState<number | null>(null);
   const [newThreadOpen, setNewThreadOpen] = useState(false);
+  const { requireLogin, loginGate } = useLoginGate();
+
+  // Login-then-continue gate like the Angular version: the new-thread modal
+  // opens only after the user is authenticated instead of failing on save.
+  const openNewThread = () => {
+    void requireLogin().then((ok) => {
+      if (ok) {
+        setNewThreadOpen(true);
+      }
+    });
+  };
 
   const yearId = selectedYear?.id;
 
@@ -48,7 +60,7 @@ export function PageDiscussions() {
       <h2 className="title">{t('discussion.title')}</h2>
 
       <div className="controls">
-        <a className="new-thread clickable" onClick={() => setNewThreadOpen(true)}>
+        <a className="new-thread clickable" onClick={openNewThread}>
           {t('discussion.new')}
         </a>
         {waves.length > 0 && (
@@ -115,6 +127,7 @@ export function PageDiscussions() {
         onClose={() => setNewThreadOpen(false)}
         onSaved={(newThreadId) => router.push(`/${ROUTES.discussion}/${newThreadId}`)}
       />
+      {loginGate}
     </main>
   );
 }

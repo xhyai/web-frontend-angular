@@ -8,6 +8,7 @@ import {
 } from '../../api/client';
 import type { components } from '../../api/schema';
 import { useAuth } from '../../auth/AuthContext';
+import { useLoginGate } from '../../auth/useLoginGate';
 import { useUser } from '../../hooks/useUsers';
 import { useTranslation } from 'react-i18next';
 import { ROUTES } from '../../routes';
@@ -83,6 +84,17 @@ export function DiscussionThreadPosts({
     { show: false, mode: 'reply', text: '' }
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { requireLogin, loginGate } = useLoginGate();
+
+  // Login-then-continue gate like the Angular version: the reply/edit modal
+  // opens only after the user is authenticated instead of failing on save.
+  const openReplyModal = (mode: PostReplyMode, text: string) => {
+    void requireLogin().then((ok) => {
+      if (ok) {
+        setReplyModal({ show: true, mode, text });
+      }
+    });
+  };
 
   if (!post) {
     return null;
@@ -157,7 +169,7 @@ export function DiscussionThreadPosts({
                 <a
                   className="edit clickable"
                   title={t('discussion-thread.post.edit.tooltip')}
-                  onClick={() => setReplyModal({ show: true, mode: 'edit', text: post.body })}
+                  onClick={() => openReplyModal('edit', post.body)}
                 >
                   {t('discussion-thread.post.edit.title')}
                 </a>
@@ -165,7 +177,7 @@ export function DiscussionThreadPosts({
               <a
                 className="reply clickable"
                 title={t('discussion-thread.post.reply.tooltip')}
-                onClick={() => setReplyModal({ show: true, mode: 'reply', text: '' })}
+                onClick={() => openReplyModal('reply', '')}
               >
                 {t('discussion-thread.post.reply.title')}
               </a>
@@ -249,6 +261,7 @@ export function DiscussionThreadPosts({
           onModified?.();
         }}
       />
+      {loginGate}
       <ConfirmDialog
         open={confirmDelete}
         question="discussion-thread.post.delete.confirmation"
