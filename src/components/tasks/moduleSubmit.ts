@@ -3,16 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { components } from '../../api/schema';
 import { modulesSubmitSingle } from '../../api/client';
+import { postJsonWithProgress } from '../../api/progressUpload';
 
 type S = components['schemas'];
 
 /**
- * POSTs a module submission as a JSON body to /modules/{id}/submit.
+ * POSTs a module submission as a JSON body to /modules/{id}/submit,
+ * reporting upload progress through XHR (0..1 fractions).
  */
 export async function submitModule(
   moduleId: number,
-  content: S['ModuleSubmissionData']
+  content: S['ModuleSubmissionData'],
+  onProgress?: (fraction: number) => void
 ): Promise<S['ModuleSubmitResponse']> {
+  if (onProgress) {
+    return postJsonWithProgress<S['ModuleSubmitResponse']>(`/modules/${moduleId}/submit`, { content }, onProgress);
+  }
   return modulesSubmitSingle(moduleId, { content });
 }
 
@@ -44,6 +50,8 @@ export function subscribeModuleStatus(listener: StatusListener): () => void {
 export interface ModuleSubmit {
   status: S['ModuleSubmitResponse'] | null;
   submitting: boolean;
+  /** fraction of the submission already uploaded (0..1), null when idle */
+  progress: number | null;
   submit: (content: S['ModuleSubmissionData']) => Promise<void>;
   /** hides the last submit result, port of ModuleService.hideSubmit */
   clearStatus: () => void;
@@ -58,6 +66,7 @@ export function useModuleSubmit(moduleId: number): ModuleSubmit {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<S['ModuleSubmitResponse'] | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const submittingRef = useRef(false);
 
   useEffect(
@@ -93,13 +102,15 @@ export function useModuleSubmit(moduleId: number): ModuleSubmit {
       }
       submittingRef.current = true;
       setSubmitting(true);
+      setProgress(0);
       try {
-        applyResult(await submitModule(moduleId, content));
+        applyResult(await submitModule(moduleId, content, (fraction) => setProgress(fraction)));
       } catch {
         applyResult({ result: 'error', error: t('tasks.module.server-error') });
       } finally {
         submittingRef.current = false;
         setSubmitting(false);
+        setProgress(null);
       }
     },
     [moduleId, applyResult, t]
@@ -110,5 +121,5 @@ export function useModuleSubmit(moduleId: number): ModuleSubmit {
     publishModuleStatus({ moduleId, result: null });
   }, [moduleId]);
 
-  return { status, submitting, submit, clearStatus };
+  return { status, submitting, progress, submit, clearStatus };
 }
