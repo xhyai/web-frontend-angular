@@ -24,6 +24,7 @@ interface Arrow {
  */
 export function TasksGraph({ tasks }: { tasks: TaskWithIcon[] }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
+  const arrowsRef = useRef<SVGSVGElement>(null);
   const [arrows, setArrows] = useState<Arrow[]>([]);
   const [animated, setAnimated] = useState(false);
 
@@ -42,7 +43,14 @@ export function TasksGraph({ tasks }: { tasks: TaskWithIcon[] }): React.ReactEle
       if (!container) {
         return;
       }
-      const { top, left } = container.getBoundingClientRect();
+      const { top, left, width, height } = container.getBoundingClientRect();
+      // The SVG has no intrinsic size — size it to the graph like the
+      // original does, otherwise longer edges get clipped.
+      const svg = arrowsRef.current;
+      if (svg) {
+        svg.style.width = `${width}px`;
+        svg.style.height = `${height}px`;
+      }
       const drawn: Arrow[] = [];
       flatArray(tasksGraphed).forEach((task) => {
         const elTask = container.querySelector(`#ksi-task-${task.id}`);
@@ -147,7 +155,7 @@ export function TasksGraph({ tasks }: { tasks: TaskWithIcon[] }): React.ReactEle
   return (
     <div className="tasks-graph" ref={containerRef}>
       <div className="arrows-container">
-        <svg className="arrows">
+        <svg className="arrows" ref={arrowsRef}>
           {arrows.map((arrow) => (
             <line
               key={arrow.key}
